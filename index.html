@@ -1,0 +1,429 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            background: linear-gradient(135deg, #1a1a1a 60%, #b30000 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        header {
+            background: linear-gradient(90deg, #b30000 60%, #1a1a1a 100%);
+            color: #fff;
+            padding: 2.5rem 1rem 2rem 1rem;
+            text-align: center;
+            box-shadow: 0 8px 32px #b3000044;
+            border-radius: 0 0 32px 32px;
+            position: relative;
+            font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+        }
+        header::after {
+            content: '';
+            display: block;
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 6px;
+            background: linear-gradient(90deg, #b30000 0%, #ff3333 100%);
+            border-radius: 3px;
+            box-shadow: 0 2px 8px #b3000044;
+        }
+        #map {
+            width: 100%;
+            height: 420px;
+            background: rgba(34,34,34,0.85);
+            margin-bottom: 2rem;
+            border-radius: 32px;
+            box-shadow: 0 8px 32px #b3000044, 0 1.5px 8px #fff2;
+            border: 2px solid #b30000;
+            backdrop-filter: blur(8px);
+            transition: box-shadow 0.3s;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+        .party-list {
+            max-width: 650px;
+            margin: 0 auto 2rem auto;
+            background: rgba(24,24,24,0.92);
+            border-radius: 32px;
+            box-shadow: 0 8px 32px #b3000044, 0 1.5px 8px #fff2;
+            padding: 2rem 1.5rem;
+            border: 2px solid #b30000;
+            backdrop-filter: blur(8px);
+        }
+        .party-item {
+            border-bottom: 1px solid #b30000;
+            padding: 1.1rem 0;
+            font-size: 1.18rem;
+            color: #fff;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px #b3000022;
+            position: relative;
+            overflow: hidden;
+        }
+        .party-item:last-child {
+            border-bottom: none;
+        }
+        .party-item:hover {
+            background: linear-gradient(90deg, #b30000 60%, #222 100%);
+            color: #fff;
+            box-shadow: 0 8px 32px #b3000044;
+            transform: scale(1.03);
+        }
+        label {
+            margin-right: 0.5rem;
+            font-weight: 700;
+            color: #b30000;
+            letter-spacing: 0.04em;
+            font-size: 1.08rem;
+        }
+        input, button {
+            padding: 0.8rem 1.1rem;
+            border-radius: 14px;
+            border: 2px solid #b30000;
+            font-size: 1.12rem;
+            transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+            background: rgba(34,34,34,0.85);
+            color: #fff;
+            box-shadow: 0 2px 8px #b3000022;
+        }
+        input:focus {
+            border-color: #ff3333;
+            outline: none;
+            box-shadow: 0 0 0 2px #b3000044;
+            background: rgba(34,34,34,0.95);
+        }
+        button {
+            background: linear-gradient(90deg, #b30000 70%, #ff3333 100%);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-weight: 800;
+            box-shadow: 0 4px 16px #b3000044;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #fff 10%, #b30000 90%);
+            color: #b30000;
+            box-shadow: 0 8px 32px #b3000044;
+            transform: scale(1.05);
+        }
+        #citySuggestions ul {
+            background: rgba(34,34,34,0.95);
+            color: #fff;
+            border: 2px solid #b30000;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px #b3000022;
+        }
+        #citySuggestions li {
+            background: rgba(34,34,34,0.95);
+            color: #fff;
+            border-bottom: 1px solid #b30000;
+            border-radius: 0;
+        }
+        #citySuggestions li:hover {
+            background: linear-gradient(90deg, #b30000 60%, #222 100%);
+            color: #fff;
+        }
+        @media (max-width: 700px) {
+            .party-list {
+                max-width: 99vw;
+                padding: 1.2rem 0.5rem;
+            }
+            #map {
+                height: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Lo</h1>
+        <p>Drop The Lo!</p>
+    </header>
+    <div class="controls">
+        <form id="partyForm">
+            <label>
+                Party Name:
+                <input type="text" id="partyName" required>
+            </label>
+            <label>
+                City:
+                <input type="text" id="partyCity" required autocomplete="off" placeholder="Start typing a city...">
+                <div id="citySuggestions" style="position:relative;z-index:10;"></div>
+            </label>
+            <label>
+                Instagram Handle:
+                <input type="text" id="partyInstagram" placeholder="@yourhandle">
+            </label>
+            <label>
+                VIP Phone Number:
+                <input type="tel" id="partyVIP" placeholder="(555) 555-5555">
+            </label>
+            <button type="submit">Add Party</button>
+        </form>
+    </div>
+    <div id="map">
+    <!-- Map will be rendered here by Leaflet.js -->
+    <noscript style="color:#fff;background:#b30000;padding:1rem;text-align:center;">Map cannot be displayed. JavaScript is required.</noscript>
+    </div>
+    <div class="party-list" id="partyList">
+    <h2>Party List</h2>
+    <input type="text" id="partySearch" placeholder="Search by name or location..." style="width:100%;margin-bottom:1rem;padding:0.5rem 0.75rem;font-size:1rem;border-radius:6px;border:1px solid #bdbdfc;">
+    <div id="partyItems"></div>
+    </div>
+    <!-- Leaflet JS -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+    // Main app logic
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- LocalStorage Helpers ---
+        function savePartiesToStorage(parties) {
+            const data = { parties, timestamp: Date.now() };
+            localStorage.setItem('partyPins', JSON.stringify(data));
+        }
+        function loadPartiesFromStorage() {
+            const data = localStorage.getItem('partyPins');
+            if (!data) return [];
+            try {
+                const parsed = JSON.parse(data);
+                if (Date.now() - parsed.timestamp < 86400000) {
+                    return parsed.parties;
+                } else {
+                    localStorage.removeItem('partyPins');
+                    return [];
+                }
+            } catch {
+                return [];
+            }
+        }
+
+        // --- Data & Map Setup ---
+        let parties = loadPartiesFromStorage();
+        const map = L.map('map').setView([39.8283, -98.5795], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // --- Pin Rendering ---
+        async function addPartyPin(party) {
+            let coords = null;
+            if (party.lat && party.lng) {
+                coords = [party.lat, party.lng];
+            } else {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(party.city + ', USA')}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                }
+            }
+            if (coords) {
+                let popup = `<b>${party.name}</b><br>${party.city}`;
+                if (party.instagram) popup += `<br>Instagram: <a href='https://instagram.com/${party.instagram.replace(/^@/,"")}' target='_blank' style='color:#b30000;'>${party.instagram}</a>`;
+                if (party.vip) popup += `<br>VIP: <a href='tel:${party.vip}' style='color:#b30000;'>${party.vip}</a>`;
+                L.marker(coords).addTo(map)
+                    .bindPopup(popup);
+            }
+        }
+        (async function() {
+            for (const party of parties) {
+                await addPartyPin(party);
+            }
+        })();
+
+        // --- DOM Elements ---
+        const partyForm = document.getElementById('partyForm');
+        const partyList = document.getElementById('partyList');
+        const partyItemsDiv = document.getElementById('partyItems');
+        const partyCity = document.getElementById('partyCity');
+        const citySuggestions = document.getElementById('citySuggestions');
+        let selectedCity = null;
+        const usCities = [
+            { name: "Columbus", state: "OH" },
+            { name: "Cleveland", state: "OH" },
+            { name: "Cincinnati", state: "OH" },
+            { name: "Toledo", state: "OH" },
+            { name: "Akron", state: "OH" },
+            { name: "Dayton", state: "OH" },
+            { name: "Parma", state: "OH" },
+            { name: "Canton", state: "OH" },
+            { name: "Youngstown", state: "OH" },
+            { name: "Lorain", state: "OH" },
+            { name: "Hamilton", state: "OH" },
+            { name: "Springfield", state: "OH" },
+            { name: "Kettering", state: "OH" },
+            { name: "Elyria", state: "OH" },
+            { name: "Lakewood", state: "OH" },
+            { name: "Beaufort", state: "SC" },
+            { name: "New York", state: "NY" },
+            { name: "Los Angeles", state: "CA" },
+            { name: "Chicago", state: "IL" },
+            { name: "Houston", state: "TX" },
+            { name: "Phoenix", state: "AZ" },
+            { name: "Philadelphia", state: "PA" },
+            { name: "San Antonio", state: "TX" },
+            { name: "San Diego", state: "CA" },
+            { name: "Dallas", state: "TX" },
+            { name: "San Jose", state: "CA" },
+            { name: "Austin", state: "TX" },
+            { name: "Jacksonville", state: "FL" },
+            { name: "Fort Worth", state: "TX" },
+            { name: "Charlotte", state: "NC" },
+            { name: "San Francisco", state: "CA" },
+            { name: "Indianapolis", state: "IN" },
+            { name: "Seattle", state: "WA" },
+            { name: "Denver", state: "CO" },
+            { name: "Washington", state: "DC" },
+            { name: "Boston", state: "MA" },
+            { name: "El Paso", state: "TX" },
+            { name: "Nashville", state: "TN" },
+            { name: "Detroit", state: "MI" },
+            { name: "Oklahoma City", state: "OK" },
+            { name: "Portland", state: "OR" },
+            { name: "Las Vegas", state: "NV" },
+            { name: "Memphis", state: "TN" },
+            { name: "Louisville", state: "KY" },
+            { name: "Baltimore", state: "MD" },
+            { name: "Milwaukee", state: "WI" },
+            { name: "Albuquerque", state: "NM" },
+            { name: "Tucson", state: "AZ" },
+            { name: "Fresno", state: "CA" },
+            { name: "Mesa", state: "AZ" },
+            { name: "Sacramento", state: "CA" },
+            { name: "Atlanta", state: "GA" },
+            { name: "Kansas City", state: "MO" },
+            { name: "Colorado Springs", state: "CO" },
+            { name: "Miami", state: "FL" },
+            { name: "Raleigh", state: "NC" },
+            { name: "Omaha", state: "NE" },
+            { name: "Long Beach", state: "CA" },
+            { name: "Virginia Beach", state: "VA" },
+            { name: "Oakland", state: "CA" },
+            { name: "Minneapolis", state: "MN" },
+            { name: "Tulsa", state: "OK" },
+            { name: "Arlington", state: "TX" },
+            { name: "New Orleans", state: "LA" }
+        ];
+
+        // --- Party List Rendering ---
+        function renderPartyList() {
+            partyItemsDiv.innerHTML = "";
+            parties.forEach(party => {
+                const item = document.createElement('div');
+                item.className = 'party-item';
+                item.innerHTML = `<strong>${party.name}</strong> @ ${party.city}` +
+                    (party.instagram ? `<br>Instagram: <a href='https://instagram.com/${party.instagram.replace(/^@/,"")}" target='_blank' style='color:#b30000;'>${party.instagram}</a>` : "") +
+                    (party.vip ? `<br>VIP: <a href='tel:${party.vip}' style='color:#b30000;'>${party.vip}</a>` : "");
+                partyItemsDiv.appendChild(item);
+            });
+        }
+        renderPartyList();
+
+        // --- City Autocomplete ---
+        partyCity.addEventListener('input', async function() {
+            const query = partyCity.value.trim().toLowerCase();
+            if (query.length < 2) {
+                citySuggestions.innerHTML = "";
+                selectedCity = null;
+                return;
+            }
+            const matches = usCities.filter(city =>
+                city.name.toLowerCase().startsWith(query) ||
+                (city.name + ', ' + city.state).toLowerCase().startsWith(query)
+            );
+            citySuggestions.innerHTML = "";
+            if (matches.length > 0) {
+                const list = document.createElement('ul');
+                list.style.position = 'absolute';
+                list.style.background = '#222';
+                list.style.color = '#fff';
+                list.style.border = '1px solid #b30000';
+                list.style.width = partyCity.offsetWidth + 'px';
+                list.style.listStyle = 'none';
+                list.style.margin = 0;
+                list.style.padding = 0;
+                list.style.zIndex = 100;
+                matches.forEach(city => {
+                    const item = document.createElement('li');
+                    item.textContent = `${city.name}, ${city.state}`;
+                    item.style.padding = '0.5rem';
+                    item.style.cursor = 'pointer';
+                    item.addEventListener('mousedown', function(e) {
+                        partyCity.value = `${city.name}, ${city.state}`;
+                        selectedCity = { name: city.name, adminCode1: city.state };
+                        citySuggestions.innerHTML = "";
+                    });
+                    list.appendChild(item);
+                });
+                citySuggestions.appendChild(list);
+            } else {
+                citySuggestions.innerHTML = `<div style='background:#222;color:#fff;padding:0.5rem;border:1px solid #b30000;'>No cities found.</div>`;
+            }
+        });
+
+        // --- Hide Suggestions on Click ---
+        document.addEventListener('click', function(e) {
+            if (!citySuggestions.contains(e.target) && e.target !== partyCity) {
+                citySuggestions.innerHTML = "";
+            }
+        });
+
+        // --- Form Submission ---
+        partyForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('partyName').value.trim();
+            const city = partyCity.value.trim();
+            const instagram = document.getElementById('partyInstagram').value.trim();
+            const vip = document.getElementById('partyVIP').value.trim();
+            let lat, lng;
+            if (name && city) {
+                if (selectedCity && selectedCity.name + ', ' + selectedCity.adminCode1 === city) {
+                    lat = selectedCity.lat;
+                    lng = selectedCity.lng;
+                } else {
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city + ', USA')}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        lat = parseFloat(data[0].lat);
+                        lng = parseFloat(data[0].lon);
+                    }
+                }
+                const party = { name, city, instagram, vip, lat, lng };
+                parties.push(party);
+                savePartiesToStorage(parties);
+                renderPartyList();
+                if (lat && lng) {
+                    let popup = `<b>${name}</b><br>${city}`;
+                    if (instagram) popup += `<br>Instagram: <a href='https://instagram.com/${instagram.replace(/^@/,"")}' target='_blank' style='color:#b30000;'>${instagram}</a>`;
+                    if (vip) popup += `<br>VIP: <a href='tel:${vip}' style='color:#b30000;'>${vip}</a>`;
+                    L.marker([lat, lng]).addTo(map)
+                        .bindPopup(popup)
+                        .openPopup();
+                }
+                partyForm.reset();
+                selectedCity = null;
+            }
+        });
+    });
+    </script>
+</body>
+</html>
